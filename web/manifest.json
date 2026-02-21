@@ -1,0 +1,9 @@
+{
+    "name": "천연눈물",
+    "short_name": "TearDrop",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#1565C0",
+    "theme_color": "#1565C0",
+    "description": "Digital Prescription for Dry Eyes - 안구건조증을 위한 디지털 처방전"
+}
