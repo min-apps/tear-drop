@@ -1,9 +1,9 @@
 {
-    "name": "천연눈물",
-    "short_name": "TearDrop",
+    "name": "Teary - 천연눈물",
+    "short_name": "Teary",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#1565C0",
-    "theme_color": "#1565C0",
-    "description": "Digital Prescription for Dry Eyes - 안구건조증을 위한 디지털 처방전"
+    "background_color": "#FAFBFD",
+    "theme_color": "#2563EB",
+    "description": "감동적인 영상으로 자연스러운 눈물을 유도하는 안구건조증 케어 앱"
 }

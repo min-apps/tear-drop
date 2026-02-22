@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>개인정보처리방침 - Teary (천연눈물)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      background-color: #FAFBFD;
+      color: #1E293B;
+      line-height: 1.8;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #2563EB;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 32px;
+    }
+    .back-link:hover { text-decoration: underline; }
+    .back-link svg { width: 16px; height: 16px; }
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1E293B;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+    .app-name {
+      font-size: 15px;
+      color: #64748B;
+      margin-bottom: 8px;
+    }
+    .effective-date {
+      font-size: 14px;
+      color: #94A3B8;
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1E293B;
+      margin-top: 36px;
+      margin-bottom: 12px;
+      padding-left: 12px;
+      border-left: 3px solid #2563EB;
+    }
+    p { margin-bottom: 12px; font-size: 15px; color: #334155; }
+    ul {
+      margin: 8px 0 16px 20px;
+      font-size: 15px;
+      color: #334155;
+    }
+    ul li { margin-bottom: 6px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 20px;
+      font-size: 14px;
+    }
+    table th, table td {
+      border: 1px solid #E2E8F0;
+      padding: 10px 14px;
+      text-align: left;
+    }
+    table th {
+      background-color: #F1F5F9;
+      font-weight: 600;
+      color: #1E293B;
+      white-space: nowrap;
+    }
+    table td { color: #334155; }
+    .highlight-box {
+      background: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 16px 0;
+      font-size: 14px;
+      color: #1E40AF;
+    }
+    .contact-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-top: 24px;
+    }
+    .contact-box p { margin-bottom: 6px; font-size: 14px; }
+    .contact-box a { color: #2563EB; text-decoration: none; }
+    .contact-box a:hover { text-decoration: underline; }
+    footer {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #E2E8F0;
+      text-align: center;
+      font-size: 13px;
+      color: #94A3B8;
+    }
+    @media (max-width: 640px) {
+      .container { padding: 32px 18px 60px; }
+      h1 { font-size: 24px; }
+      h2 { font-size: 16px; }
+      table { font-size: 13px; }
+      table th, table td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="../" class="back-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      앱으로 돌아가기
+    </a>
+
+    <h1>개인정보처리방침</h1>
+    <p class="app-name">Teary (천연눈물)</p>
+    <p class="effective-date">시행일: 2026년 2월 22일</p>
+
+    <p>오정민(이하 "개발자")은 Teary(천연눈물) 앱(이하 "앱")의 이용자 개인정보 보호를 매우 중요시하며, 「개인정보 보호법」 등 관련 법령을 준수합니다. 본 개인정보처리방침은 앱이 수집하는 정보의 종류, 이용 목적, 보관 방법 등을 안내합니다.</p>
+
+    <h2>1. 수집하는 정보</h2>
+    <p>본 앱은 회원가입 절차 없이 익명 인증 방식으로 운영되며, 이름, 이메일, 전화번호 등 개인을 식별할 수 있는 정보는 일절 수집하지 않습니다.</p>
+
+    <div class="highlight-box">
+      본 앱은 개인 식별 정보를 수집하지 않습니다. 모든 데이터는 익명으로 처리됩니다.
+    </div>
+
+    <table>
+      <tr>
+        <th>항목</th>
+        <th>설명</th>
+        <th>수집 목적</th>
+      </tr>
+      <tr>
+        <td>익명 인증 UID</td>
+        <td>Firebase Anonymous Auth에 의해 자동 생성되는 고유 식별자</td>
+        <td>사용자 데이터 구분 및 동기화</td>
+      </tr>
+      <tr>
+        <td>눈물 평가 기록</td>
+        <td>영상 시청 후 사용자가 입력한 눈물 등급 (평점)</td>
+        <td>앱 핵심 기능 제공</td>
+      </tr>
+      <tr>
+        <td>감정 태그</td>
+        <td>사용자가 선택한 감정 태그 정보</td>
+        <td>콘텐츠 분류 및 추천</td>
+      </tr>
+      <tr>
+        <td>시청 기록</td>
+        <td>사용자가 시청한 영상 목록 및 시점</td>
+        <td>시청 이력 관리</td>
+      </tr>
+      <tr>
+        <td>영상 북마크</td>
+        <td>사용자가 저장한 영상 즐겨찾기 정보</td>
+        <td>북마크 기능 제공</td>
+      </tr>
+    </table>
+
+    <h2>2. 정보의 이용 목적</h2>
+    <p>수집된 정보는 다음의 목적으로만 이용됩니다.</p>
+    <ul>
+      <li>앱 서비스 제공 및 기능 운영 (눈물 평가, 감정 태그, 북마크 등)</li>
+      <li>사용자 데이터의 기기 간 동기화</li>
+      <li>앱 이용 패턴 분석을 통한 서비스 개선 (익명 통계)</li>
+    </ul>
+
+    <h2>3. 정보의 저장 및 보관</h2>
+    <p>모든 데이터는 Firebase(Google Cloud)에 저장되며, 서버 위치는 <strong>asia-northeast3(서울)</strong> 리전입니다.</p>
+    <ul>
+      <li>데이터 전송 시 HTTPS/TLS 암호화 적용</li>
+      <li>Firebase Security Rules에 의한 접근 제어</li>
+      <li>사용자 본인의 데이터에만 접근 가능</li>
+    </ul>
+
+    <h2>4. 정보의 보유 및 파기</h2>
+    <ul>
+      <li>앱 사용 기간 동안 데이터를 보유합니다.</li>
+      <li>앱 삭제 시 기기 내 로컬 데이터는 자동 삭제됩니다.</li>
+      <li>서버에 저장된 익명 데이터의 삭제를 원하시는 경우, 아래 연락처로 요청해주시면 처리해드립니다.</li>
+    </ul>
+
+    <h2>5. 제3자 서비스</h2>
+    <p>본 앱은 다음의 제3자 서비스를 이용합니다.</p>
+
+    <table>
+      <tr>
+        <th>서비스</th>
+        <th>제공업체</th>
+        <th>용도</th>
+      </tr>
+      <tr>
+        <td>Firebase Authentication</td>
+        <td>Google LLC</td>
+        <td>익명 인증</td>
+      </tr>
+      <tr>
+        <td>Cloud Firestore</td>
+        <td>Google LLC</td>
+        <td>데이터 저장</td>
+      </tr>
+      <tr>
+        <td>Firebase Analytics</td>
+        <td>Google LLC</td>
+        <td>익명 사용 통계 분석</td>
+      </tr>
+      <tr>
+        <td>YouTube</td>
+        <td>Google LLC</td>
+        <td>영상 콘텐츠 임베딩</td>
+      </tr>
+    </table>
+
+    <p>각 서비스의 개인정보처리방침은 해당 업체의 정책을 따릅니다.</p>
+    <ul>
+      <li><a href="https://policies.google.com/privacy" style="color:#2563EB;">Google 개인정보처리방침</a></li>
+      <li><a href="https://firebase.google.com/support/privacy" style="color:#2563EB;">Firebase 개인정보처리방침</a></li>
+      <li><a href="https://www.youtube.com/t/terms" style="color:#2563EB;">YouTube 서비스 약관</a></li>
+    </ul>
+
+    <h2>6. 이용자의 권리</h2>
+    <ul>
+      <li>이용자는 언제든지 자신의 데이터 삭제를 요청할 수 있습니다.</li>
+      <li>앱 삭제를 통해 로컬 데이터를 즉시 삭제할 수 있습니다.</li>
+      <li>서버 데이터 삭제 요청은 아래 연락처로 문의해주세요.</li>
+    </ul>
+
+    <h2>7. 아동의 개인정보 보호</h2>
+    <p>본 앱은 만 14세 미만 아동의 개인정보를 의도적으로 수집하지 않습니다. 본 앱은 개인 식별 정보를 수집하지 않는 익명 서비스이나, 만 14세 미만 아동이 이용하는 것을 인지하게 되는 경우 해당 데이터를 즉시 삭제합니다.</p>
+
+    <h2>8. 개인정보처리방침의 변경</h2>
+    <p>본 방침이 변경되는 경우, 변경 사항을 앱 내 공지 또는 본 페이지를 통해 고지합니다. 변경된 방침은 고지 후 즉시 효력이 발생합니다.</p>
+
+    <h2>9. 개인정보 보호책임자</h2>
+    <div class="contact-box">
+      <p><strong>성명:</strong> 오정민</p>
+      <p><strong>이메일:</strong> <a href="mailto:tangza@gmail.com">tangza@gmail.com</a></p>
+      <p>개인정보와 관련한 문의, 불만, 삭제 요청 등은 위 연락처로 보내주시면 신속히 처리하겠습니다.</p>
+    </div>
+
+    <footer>
+      &copy; 2026 Teary (천연눈물). All rights reserved.
+    </footer>
+  </div>
+</body>
+</html>

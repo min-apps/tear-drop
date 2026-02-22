@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read/write their own document
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      // Saved links subcollection
+      match /saved_links/{linkId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+
+      // Reactions subcollection (append-only: create + read, no update/delete)
+      match /reactions/{reactionId} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow create: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // Video stats: any authenticated user can read/write
+    match /video_stats/{youtubeId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

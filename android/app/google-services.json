@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "592518994303",
+    "project_id": "teary-app",
+    "storage_bucket": "teary-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:592518994303:android:30cdebe096521ba108a24a",
+        "android_client_info": {
+          "package_name": "com.tangza.teary"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3C4vhlGW8Uw2Inv01uZm4Y84zONGHmOs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
