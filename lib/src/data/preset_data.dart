@@ -1705,4 +1705,39 @@ class PresetData {
   static PresetVideoMeta? getVideoMeta(String youtubeId) {
     return videoMeta[youtubeId];
   }
+
+  /// Maximum video duration in seconds for the feed.
+  static const int maxFeedDurationSec = 180;
+
+  /// Get short video IDs (≤ 3 min) for a specific category, or all if null.
+  /// Returns shuffled list for variety.
+  static List<String> getShortVideoIds({String? categoryId}) {
+    List<String> ids;
+    if (categoryId != null) {
+      final collection = getById(categoryId);
+      ids = collection?.videoIds ?? [];
+    } else {
+      ids = getAllVideoIds();
+    }
+    // Filter to short videos only
+    final filtered = ids.where((id) {
+      final meta = videoMeta[id];
+      if (meta == null) return false;
+      return meta.durationSeconds > 0 &&
+          meta.durationSeconds <= maxFeedDurationSec;
+    }).toList();
+    filtered.shuffle();
+    return filtered;
+  }
+
+  /// Get short video IDs sorted by duration (shortest first = more Shorts-like).
+  static List<String> getShortVideoIdsSorted({String? categoryId}) {
+    final ids = getShortVideoIds(categoryId: categoryId);
+    ids.sort((a, b) {
+      final da = videoMeta[a]?.durationSeconds ?? 999;
+      final db = videoMeta[b]?.durationSeconds ?? 999;
+      return da.compareTo(db);
+    });
+    return ids;
+  }
 }
