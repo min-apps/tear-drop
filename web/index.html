@@ -6,6 +6,12 @@
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
   <title>Teary - 천연눈물</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    /* Disable pointer events on YouTube iframe so Flutter handles all gestures */
+    flt-platform-view, flt-platform-view-slot {
+      pointer-events: none !important;
+    }
+  </style>
   <script src="flutter_bootstrap.js" async></script>
 </head>
 <body>

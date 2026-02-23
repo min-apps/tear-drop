@@ -199,13 +199,51 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
             ),
           ),
 
-          // Side action buttons (right) — above gesture layer, tappable
+          // Side action buttons + nav (right) — above gesture layer, tappable
           Positioned(
             right: 12,
             bottom: MediaQuery.of(context).padding.bottom + 80,
-            child: _SideActions(
-              onBookmark: _onBookmark,
-              onFeedback: _onFeedbackTap,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Navigate previous
+                _ActionButton(
+                  icon: Icons.keyboard_arrow_up_rounded,
+                  label: '이전',
+                  onTap: _currentIndex > 0
+                      ? () {
+                          HapticFeedback.lightImpact();
+                          _onPageChanged(_currentIndex - 1);
+                        }
+                      : null,
+                  dimmed: _currentIndex <= 0,
+                ),
+                const SizedBox(height: 16),
+                _ActionButton(
+                  icon: Icons.water_drop_rounded,
+                  label: '평가',
+                  onTap: _onFeedbackTap,
+                ),
+                const SizedBox(height: 16),
+                _ActionButton(
+                  icon: Icons.bookmark_add_outlined,
+                  label: '저장',
+                  onTap: _onBookmark,
+                ),
+                const SizedBox(height: 16),
+                // Navigate next
+                _ActionButton(
+                  icon: Icons.keyboard_arrow_down_rounded,
+                  label: '다음',
+                  onTap: _currentIndex < _videoIds.length - 1
+                      ? () {
+                          HapticFeedback.lightImpact();
+                          _onPageChanged(_currentIndex + 1);
+                        }
+                      : null,
+                  dimmed: _currentIndex >= _videoIds.length - 1,
+                ),
+              ],
             ),
           ),
 
@@ -512,71 +550,48 @@ class _CategoryChips extends StatelessWidget {
   }
 }
 
-class _SideActions extends StatelessWidget {
-  const _SideActions({
-    required this.onBookmark,
-    required this.onFeedback,
-  });
-  final VoidCallback onBookmark;
-  final VoidCallback onFeedback;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _ActionButton(
-          icon: Icons.water_drop_rounded,
-          label: '평가',
-          onTap: onFeedback,
-        ),
-        const SizedBox(height: 20),
-        _ActionButton(
-          icon: Icons.bookmark_add_outlined,
-          label: '저장',
-          onTap: onBookmark,
-        ),
-      ],
-    );
-  }
-}
-
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.icon,
     required this.label,
-    required this.onTap,
+    this.onTap,
+    this.dimmed = false,
   });
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
+    final opacity = dimmed ? 0.3 : 1.0;
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
+      child: Opacity(
+        opacity: opacity,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: Colors.white, size: 24),
             ),
-            child: Icon(icon, color: Colors.white, size: 24),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

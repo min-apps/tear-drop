@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:teardrop/src/data/services/analytics_service.dart';
-import 'package:teardrop/src/theme.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key, required this.child});
@@ -48,98 +47,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Hide bottom nav when on feed tab (full-screen video experience)
-    final isFeedTab = _currentIndex == 0;
-
     return Scaffold(
+      extendBody: true,
       body: widget.child,
-      bottomNavigationBar: isFeedTab
-          ? null
-          : Container(
-              decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: TearDropTheme.border, width: 0.5),
-                ),
-              ),
-              child: _buildNavBar(),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xF0111827),
+          border: Border(
+            top: BorderSide(
+              color: Colors.white.withValues(alpha: 0.08),
+              width: 0.5,
             ),
-      // Floating nav for feed tab (semi-transparent, overlaying video)
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: isFeedTab
-          ? SafeArea(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _NavPill(
-                        icon: Icons.water_drop,
-                        label: '피드',
-                        isSelected: true,
-                        onTap: () => _onTabTapped(0),
-                      ),
-                      _NavPill(
-                        icon: Icons.bookmark_border_rounded,
-                        label: '보관함',
-                        isSelected: false,
-                        onTap: () => _onTabTapped(1),
-                      ),
-                      _NavPill(
-                        icon: Icons.person_outline_rounded,
-                        label: '프로필',
-                        isSelected: false,
-                        onTap: () => _onTabTapped(2),
-                      ),
-                    ],
-                  ),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _NavItem(
+                  icon: Icons.water_drop_outlined,
+                  selectedIcon: Icons.water_drop,
+                  label: '피드',
+                  isSelected: _currentIndex == 0,
+                  onTap: () => _onTabTapped(0),
                 ),
-              ),
-            )
-          : null,
-    );
-  }
-
-  Widget _buildNavBar() {
-    return NavigationBar(
-      selectedIndex: _currentIndex,
-      onDestinationSelected: _onTabTapped,
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.water_drop_outlined),
-          selectedIcon: Icon(Icons.water_drop),
-          label: '피드',
+                _NavItem(
+                  icon: Icons.bookmark_border_rounded,
+                  selectedIcon: Icons.bookmark_rounded,
+                  label: '보관함',
+                  isSelected: _currentIndex == 1,
+                  onTap: () => _onTabTapped(1),
+                ),
+                _NavItem(
+                  icon: Icons.person_outline_rounded,
+                  selectedIcon: Icons.person_rounded,
+                  label: '프로필',
+                  isSelected: _currentIndex == 2,
+                  onTap: () => _onTabTapped(2),
+                ),
+              ],
+            ),
+          ),
         ),
-        NavigationDestination(
-          icon: Icon(Icons.bookmark_border_rounded),
-          selectedIcon: Icon(Icons.bookmark_rounded),
-          label: '보관함',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.person_outline_rounded),
-          selectedIcon: Icon(Icons.person_rounded),
-          label: '프로필',
-        ),
-      ],
+      ),
     );
   }
 }
 
-class _NavPill extends StatelessWidget {
-  const _NavPill({
+class _NavItem extends StatelessWidget {
+  const _NavItem({
     required this.icon,
+    required this.selectedIcon,
     required this.label,
     required this.isSelected,
     required this.onTap,
   });
   final IconData icon;
+  final IconData selectedIcon;
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
@@ -148,29 +115,30 @@ class _NavPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.white.withValues(alpha: 0.2)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 64,
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: Colors.white),
-            if (isSelected) ...[
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
+            Icon(
+              isSelected ? selectedIcon : icon,
+              size: 22,
+              color: isSelected
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.45),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.45),
               ),
-            ],
+            ),
           ],
         ),
       ),
