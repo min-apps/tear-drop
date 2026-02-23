@@ -7,6 +7,7 @@ import 'package:teardrop/src/data/repositories/saved_link_repository.dart';
 import 'package:teardrop/src/data/services/analytics_service.dart';
 import 'package:teardrop/src/features/auth/auth_providers.dart';
 import 'package:teardrop/src/features/player/tear_feedback_sheet.dart';
+import 'package:teardrop/src/theme.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 class FeedScreen extends ConsumerStatefulWidget {
@@ -17,27 +18,44 @@ class FeedScreen extends ConsumerStatefulWidget {
 }
 
 class _FeedScreenState extends ConsumerState<FeedScreen> {
-  late PageController _pageController;
-  late List<String> _videoIds;
+  List<String> _videoIds = [];
   String? _selectedCategory;
   int _currentIndex = 0;
   DateTime? _watchStart;
+  bool _feedStarted = false;
 
   YoutubePlayerController? _activeController;
 
   @override
-  void initState() {
-    super.initState();
-    _videoIds = PresetData.getShortVideoIds();
-    _pageController = PageController();
-    _loadVideo(0);
-  }
-
-  @override
   void dispose() {
     _activeController?.close();
-    _pageController.dispose();
     super.dispose();
+  }
+
+  void _startFeed(String categoryId) {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _selectedCategory = categoryId;
+      _videoIds = PresetData.getShortVideoIds(categoryId: categoryId);
+      _currentIndex = 0;
+      _feedStarted = true;
+    });
+    _loadVideo(0);
+
+    try {
+      AnalyticsService().logPresetOpened(categoryId);
+    } catch (_) {}
+  }
+
+  void _switchCategory(String? categoryId) {
+    if (categoryId == _selectedCategory) return;
+    _activeController?.close();
+    setState(() {
+      _selectedCategory = categoryId;
+      _videoIds = PresetData.getShortVideoIds(categoryId: categoryId);
+      _currentIndex = 0;
+    });
+    _loadVideo(0);
   }
 
   void _loadVideo(int index) {
@@ -46,7 +64,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     _activeController?.close();
     _activeController = YoutubePlayerController(
       params: const YoutubePlayerParams(
-        showControls: true,
+        showControls: false,
         mute: false,
         loop: true,
         enableCaption: false,
@@ -68,7 +86,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   }
 
   void _onPageChanged(int index) {
-    // Log exit for previous video
     try {
       AnalyticsService().logVideoExited(
         _videoIds[_currentIndex],
@@ -80,15 +97,15 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     _loadVideo(index);
   }
 
-  void _onCategoryChanged(String? categoryId) {
-    if (categoryId == _selectedCategory) return;
-    setState(() {
-      _selectedCategory = categoryId;
-      _videoIds = PresetData.getShortVideoIds(categoryId: categoryId);
-      _currentIndex = 0;
-    });
-    _pageController.jumpToPage(0);
-    _loadVideo(0);
+  void _handleSwipe(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity < -300 && _currentIndex < _videoIds.length - 1) {
+      HapticFeedback.lightImpact();
+      _onPageChanged(_currentIndex + 1);
+    } else if (velocity > 300 && _currentIndex > 0) {
+      HapticFeedback.lightImpact();
+      _onPageChanged(_currentIndex - 1);
+    }
   }
 
   void _onFeedbackTap() {
@@ -131,6 +148,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_feedStarted) {
+      return _CategoryPicker(onSelect: _startFeed);
+    }
+    return _buildFeed();
+  }
+
+  Widget _buildFeed() {
     if (_videoIds.isEmpty) {
       return const Scaffold(
         body: Center(child: Text('영상을 불러올 수 없습니다')),
@@ -142,36 +166,40 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // Video feed
-          PageView.builder(
-            controller: _pageController,
-            scrollDirection: Axis.vertical,
-            onPageChanged: _onPageChanged,
-            itemCount: _videoIds.length,
-            itemBuilder: (context, index) {
-              final videoId = _videoIds[index];
-              if (index == _currentIndex && _activeController != null) {
-                return _ActiveVideoPage(
-                  controller: _activeController!,
-                  videoId: videoId,
-                );
-              }
-              return _ThumbnailPage(videoId: videoId);
-            },
+          // Video player (touch-disabled so Flutter handles all gestures)
+          if (_activeController != null)
+            Positioned.fill(
+              child: _ActiveVideoPage(
+                controller: _activeController!,
+                videoId: _videoIds[_currentIndex],
+              ),
+            )
+          else
+            Positioned.fill(
+              child: _ThumbnailPage(videoId: _videoIds[_currentIndex]),
+            ),
+
+          // Full-screen swipe gesture detector
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onVerticalDragEnd: _handleSwipe,
+              child: const SizedBox.expand(),
+            ),
           ),
 
-          // Category chips (top)
+          // Category chips (top) — above gesture layer, tappable
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 0,
             right: 0,
             child: _CategoryChips(
               selected: _selectedCategory,
-              onChanged: _onCategoryChanged,
+              onChanged: _switchCategory,
             ),
           ),
 
-          // Side action buttons (right)
+          // Side action buttons (right) — above gesture layer, tappable
           Positioned(
             right: 12,
             bottom: MediaQuery.of(context).padding.bottom + 80,
@@ -181,13 +209,28 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
             ),
           ),
 
-          // Video info (bottom)
+          // Video info (bottom) — display only, pass through touches
           Positioned(
             left: 16,
             right: 72,
             bottom: MediaQuery.of(context).padding.bottom + 80,
-            child: _VideoInfo(
-              videoId: _videoIds[_currentIndex],
+            child: IgnorePointer(
+              child: _VideoInfo(videoId: _videoIds[_currentIndex]),
+            ),
+          ),
+
+          // Video position indicator
+          Positioned(
+            left: 16,
+            bottom: MediaQuery.of(context).padding.bottom + 60,
+            child: IgnorePointer(
+              child: Text(
+                '${_currentIndex + 1} / ${_videoIds.length}',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 11,
+                ),
+              ),
             ),
           ),
         ],
@@ -196,7 +239,166 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   }
 }
 
-// --- Active video player page ---
+// ============================================================
+// Category Picker — shown before feed starts
+// ============================================================
+class _CategoryPicker extends StatelessWidget {
+  const _CategoryPicker({required this.onSelect});
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final collections = PresetData.collections;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 40),
+              const Icon(Icons.water_drop_rounded,
+                  size: 36, color: TearDropTheme.secondary),
+              const SizedBox(height: 16),
+              Text(
+                '어떤 감정으로\n눈물을 흘려볼까요?',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      height: 1.3,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '카테고리를 선택하면 바로 영상이 재생됩니다',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.white54,
+                    ),
+              ),
+              const SizedBox(height: 32),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: GridView.builder(
+                    itemCount: collections.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 1.6,
+                    ),
+                    itemBuilder: (context, index) {
+                      final c = collections[index];
+                      final shortCount = PresetData.getShortVideoIds(
+                              categoryId: c.id)
+                          .length;
+                      return _CategoryCard(
+                        emoji: c.emoji,
+                        title: c.title,
+                        subtitle: c.subtitle,
+                        videoCount: shortCount,
+                        onTap: () => onSelect(c.id),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              SizedBox(height: bottomPad + 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryCard extends StatelessWidget {
+  const _CategoryCard({
+    required this.emoji,
+    required this.title,
+    required this.subtitle,
+    required this.videoCount,
+    required this.onTap,
+  });
+  final String emoji;
+  final String title;
+  final String subtitle;
+  final int videoCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(emoji, style: const TextStyle(fontSize: 24)),
+                  const Spacer(),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$videoCount편',
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// Feed components
+// ============================================================
+
 class _ActiveVideoPage extends StatelessWidget {
   const _ActiveVideoPage({
     required this.controller,
@@ -212,10 +414,12 @@ class _ActiveVideoPage extends StatelessWidget {
       child: Center(
         child: AspectRatio(
           aspectRatio: 9 / 16,
-          child: YoutubePlayerScaffold(
-            controller: controller,
-            aspectRatio: 9 / 16,
-            builder: (context, player) => player,
+          child: IgnorePointer(
+            child: YoutubePlayerScaffold(
+              controller: controller,
+              aspectRatio: 9 / 16,
+              builder: (context, player) => player,
+            ),
           ),
         ),
       ),
@@ -223,7 +427,6 @@ class _ActiveVideoPage extends StatelessWidget {
   }
 }
 
-// --- Thumbnail placeholder for non-active pages ---
 class _ThumbnailPage extends StatelessWidget {
   const _ThumbnailPage({required this.videoId});
   final String videoId;
@@ -254,7 +457,6 @@ class _ThumbnailPage extends StatelessWidget {
   }
 }
 
-// --- Category filter chips ---
 class _CategoryChips extends StatelessWidget {
   const _CategoryChips({
     required this.selected,
@@ -265,10 +467,8 @@ class _CategoryChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categories = [
-      (null, '전체'),
-      ...PresetData.collections.map((c) => (c.id, '${c.emoji} ${c.title}')),
-    ];
+    final categories =
+        PresetData.collections.map((c) => (c.id, '${c.emoji} ${c.title}'));
 
     return SizedBox(
       height: 36,
@@ -278,7 +478,7 @@ class _CategoryChips extends StatelessWidget {
         itemCount: categories.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final (id, label) = categories[index];
+          final (id, label) = categories.elementAt(index);
           final isSelected = id == selected;
           return GestureDetector(
             onTap: () => onChanged(id),
@@ -312,7 +512,6 @@ class _CategoryChips extends StatelessWidget {
   }
 }
 
-// --- Side action buttons (TikTok-style) ---
 class _SideActions extends StatelessWidget {
   const _SideActions({
     required this.onBookmark,
@@ -383,7 +582,6 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-// --- Video info overlay (bottom-left) ---
 class _VideoInfo extends StatelessWidget {
   const _VideoInfo({required this.videoId});
   final String videoId;
