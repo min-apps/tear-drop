@@ -4,63 +4,74 @@ import 'package:teardrop/src/shared/widgets/tear_rating_widget.dart';
 
 void main() {
   group('TearRatingWidget', () {
-    testWidgets('renders 5 teardrops', (tester) async {
+    testWidgets('renders 4 tear levels', (tester) async {
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
           body: TearRatingWidget(
-            rating: 0,
+            rating: null,
             onChanged: (_) {},
           ),
         ),
       ));
 
-      final icons = find.byIcon(Icons.water_drop_rounded);
-      expect(icons, findsNWidgets(5));
+      expect(find.text('안 남'), findsOneWidget);
+      expect(find.text('촉촉'), findsOneWidget);
+      expect(find.text('글썽'), findsOneWidget);
+      expect(find.text('울었다'), findsOneWidget);
     });
 
     testWidgets('tapping selects rating', (tester) async {
-      int selectedRating = 0;
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: StatefulBuilder(
-            builder: (context, setState) {
-              return TearRatingWidget(
-                rating: selectedRating,
-                onChanged: (r) => setState(() => selectedRating = r),
-              );
-            },
-          ),
-        ),
-      ));
-
-      // Tap the 3rd teardrop
-      final icons = find.byIcon(Icons.water_drop_rounded);
-      await tester.tap(icons.at(2));
-      await tester.pumpAndSettle();
-      expect(selectedRating, 3);
-    });
-
-    testWidgets('tapping first teardrop selects 1', (tester) async {
-      int selectedRating = 0;
+      int? selectedRating;
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
           body: TearRatingWidget(
-            rating: 0,
+            rating: selectedRating,
             onChanged: (r) => selectedRating = r,
           ),
         ),
       ));
 
-      final icons = find.byIcon(Icons.water_drop_rounded);
-      await tester.tap(icons.first);
-      expect(selectedRating, 1);
+      await tester.tap(find.text('글썽'));
+      expect(selectedRating, 2);
+    });
+
+    testWidgets('tapping first option selects 0', (tester) async {
+      int? selectedRating;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: TearRatingWidget(
+            rating: null,
+            onChanged: (r) => selectedRating = r,
+          ),
+        ),
+      ));
+
+      await tester.tap(find.text('안 남'));
+      expect(selectedRating, 0);
+    });
+
+    testWidgets('tapping last option selects 3', (tester) async {
+      int? selectedRating;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: TearRatingWidget(
+            rating: null,
+            onChanged: (r) => selectedRating = r,
+          ),
+        ),
+      ));
+
+      await tester.tap(find.text('울었다'));
+      expect(selectedRating, 3);
     });
 
     test('labelFor returns correct labels', () {
-      expect(TearRatingWidget.labelFor(1), '눈물 없음');
-      expect(TearRatingWidget.labelFor(5), '폭풍 눈물');
-      expect(TearRatingWidget.labelFor(0), '');
-      expect(TearRatingWidget.labelFor(6), '');
+      expect(TearRatingWidget.labelFor(0), '안 남');
+      expect(TearRatingWidget.labelFor(1), '촉촉');
+      expect(TearRatingWidget.labelFor(2), '글썽');
+      expect(TearRatingWidget.labelFor(3), '울었다');
+      expect(TearRatingWidget.labelFor(-1), '');
+      expect(TearRatingWidget.labelFor(4), '');
     });
   });
 }

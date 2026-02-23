@@ -6,37 +6,39 @@ import 'package:teardrop/src/data/repositories/user_repository.dart';
 import 'package:teardrop/src/data/services/analytics_service.dart';
 import 'package:teardrop/src/data/services/tear_profile_service.dart';
 import 'package:teardrop/src/features/auth/auth_providers.dart';
-import 'package:teardrop/src/shared/widgets/emotion_tag_chips.dart';
 import 'package:teardrop/src/shared/widgets/tear_rating_widget.dart';
-import 'package:teardrop/src/theme.dart';
 
 class TearFeedbackSheet extends ConsumerStatefulWidget {
   const TearFeedbackSheet({
     super.key,
     required this.youtubeId,
     required this.watchDurationSec,
+    this.categoryId,
     this.isReplay = false,
   });
 
   final String youtubeId;
   final int watchDurationSec;
+  final String? categoryId;
   final bool isReplay;
 
   static Future<void> show(
     BuildContext context, {
     required String youtubeId,
     required int watchDurationSec,
+    String? categoryId,
     bool isReplay = false,
   }) {
     return showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1E293B),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => TearFeedbackSheet(
         youtubeId: youtubeId,
         watchDurationSec: watchDurationSec,
+        categoryId: categoryId,
         isReplay: isReplay,
       ),
     );
@@ -47,8 +49,6 @@ class TearFeedbackSheet extends ConsumerStatefulWidget {
 }
 
 class _TearFeedbackSheetState extends ConsumerState<TearFeedbackSheet> {
-  int _rating = 0;
-  List<String> _selectedTags = [];
   bool _submitting = false;
 
   @override
@@ -56,9 +56,9 @@ class _TearFeedbackSheetState extends ConsumerState<TearFeedbackSheet> {
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 24,
-        right: 24,
-        top: 24,
+        left: 20,
+        right: 20,
+        top: 20,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -67,122 +67,103 @@ class _TearFeedbackSheetState extends ConsumerState<TearFeedbackSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 20),
-          Text(
-            '얼마나 울었나요?',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: TearDropTheme.textPrimary,
-                ),
-          ),
-          const SizedBox(height: 8),
-          if (_rating > 0)
-            Text(
-              TearRatingWidget.labelFor(_rating),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: TearDropTheme.primary,
-                  ),
+          const Text(
+            '눈물이 났나요?',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
             ),
-          const SizedBox(height: 16),
-          TearRatingWidget(
-            rating: _rating,
-            onChanged: (r) => setState(() => _rating = r),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 6),
           Text(
-            '어떤 감정이었나요?',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            '탭 한 번이면 끝!',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.5),
+              fontSize: 13,
+            ),
           ),
-          const SizedBox(height: 12),
-          EmotionTagChips(
-            selectedTags: _selectedTags,
-            onChanged: (tags) => setState(() => _selectedTags = tags),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _submitting ? null : _skip,
-                  child: const Text('건너뛰기'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton(
-                  onPressed: _rating > 0 && !_submitting ? _submit : null,
-                  child: _submitting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('제출하기'),
-                ),
-              ),
-            ],
-          ),
+          const SizedBox(height: 20),
+          if (_submitting)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 30),
+              child: CircularProgressIndicator(color: Colors.white),
+            )
+          else
+            TearRatingWidget(
+              rating: null,
+              onChanged: _submit,
+            ),
           const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit(int tearRating) async {
     HapticFeedback.mediumImpact();
     setState(() => _submitting = true);
     try {
       final user = ref.read(authStateProvider).value;
       if (user == null) return;
 
+      // Auto-derive emotion tag from category context
+      final autoTags = <String>[];
+      if (widget.categoryId != null) {
+        autoTags.add(widget.categoryId!);
+      }
+
       final reactionRepo = TearReactionRepository();
       final userRepo = UserRepository();
 
-      // Save reaction
       await reactionRepo.addReaction(
         uid: user.uid,
         youtubeId: widget.youtubeId,
-        tearRating: _rating,
-        emotionTags: _selectedTags,
+        tearRating: tearRating,
+        emotionTags: autoTags,
         watchDurationSec: widget.watchDurationSec,
         isReplay: widget.isReplay,
       );
 
-      // Update user aggregates
       final currentUser = await userRepo.getUser(user.uid);
       if (currentUser != null) {
         final newAvg = TearProfileService.computeNewAverage(
           currentUser.averageTearRating,
           currentUser.totalReactions,
-          _rating,
+          tearRating,
         );
         await userRepo.updateAfterReaction(
           user.uid,
-          tearRating: _rating,
-          emotionTags: _selectedTags,
+          tearRating: tearRating,
+          emotionTags: autoTags,
           newAverageRating: newAvg,
           newTotalReactions: currentUser.totalReactions + 1,
         );
       }
 
-      // Log analytics
       try {
-        final analytics = AnalyticsService();
-        await analytics.logFeedbackSubmitted(
-            widget.youtubeId, _rating, _selectedTags);
+        AnalyticsService().logFeedbackSubmitted(
+          widget.youtubeId,
+          tearRating,
+          autoTags,
+        );
       } catch (_) {}
 
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${TearRatingWidget.labelFor(tearRating)} — 기록했어요!'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: const Color(0xFF1E293B),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -192,13 +173,5 @@ class _TearFeedbackSheetState extends ConsumerState<TearFeedbackSheet> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
-  }
-
-  void _skip() {
-    try {
-      final analytics = AnalyticsService();
-      analytics.logFeedbackSkipped(widget.youtubeId);
-    } catch (_) {}
-    Navigator.of(context).pop();
   }
 }

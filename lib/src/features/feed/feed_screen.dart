@@ -114,6 +114,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       context,
       youtubeId: _videoIds[_currentIndex],
       watchDurationSec: _watchDurationSec,
+      categoryId: _selectedCategory,
     );
   }
 
