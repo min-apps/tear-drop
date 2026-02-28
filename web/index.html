@@ -7,10 +7,7 @@
   <title>Teary - 천연눈물</title>
   <link rel="manifest" href="manifest.json">
   <style>
-    /* Disable pointer events on YouTube iframe so Flutter handles all gestures */
-    flt-platform-view, flt-platform-view-slot {
-      pointer-events: none !important;
-    }
+    /* Allow pointer events on platform views (YouTube iframe needs them to play) */
   </style>
   <script src="flutter_bootstrap.js" async></script>
 </head>

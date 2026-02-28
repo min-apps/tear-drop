@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:teardrop/src/data/preset_data.dart';
-import 'package:teardrop/src/data/repositories/saved_link_repository.dart';
 import 'package:teardrop/src/data/services/analytics_service.dart';
-import 'package:teardrop/src/features/auth/auth_providers.dart';
-import 'package:teardrop/src/features/player/tear_feedback_sheet.dart';
+import 'package:teardrop/src/features/feed/category_preference.dart';
+import 'package:teardrop/src/shared/widgets/tear_rating_widget.dart';
 import 'package:teardrop/src/theme.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
@@ -20,24 +19,36 @@ class FeedScreen extends ConsumerStatefulWidget {
 class _FeedScreenState extends ConsumerState<FeedScreen> {
   List<String> _videoIds = [];
   String? _selectedCategory;
-  int _currentIndex = 0;
+  int _currentVideoIndex = 0;
   DateTime? _watchStart;
   bool _feedStarted = false;
+  final Set<String> _savedIds = {};
+  final Map<String, int> _ratings = {};
 
-  YoutubePlayerController? _activeController;
+  final PageController _pageController = PageController();
+  YoutubePlayerController? _ytController;
+
+  /// PageView layout: [Video 0] [Feedback 0] [Video 1] [Feedback 1] ...
+  int get _totalPages => _videoIds.length * 2;
+  int _videoIndexFromPage(int page) => page ~/ 2;
+  bool _isVideoPage(int page) => page.isEven;
 
   @override
   void dispose() {
-    _activeController?.close();
+    _pageController.dispose();
+    _ytController?.close();
     super.dispose();
   }
 
-  void _startFeed(String categoryId) {
+  void _startFeed(String categoryId, {bool save = true}) {
     HapticFeedback.mediumImpact();
+    if (save) {
+      ref.read(categoryPreferenceProvider.notifier).save(categoryId);
+    }
     setState(() {
       _selectedCategory = categoryId;
       _videoIds = PresetData.getShortVideoIds(categoryId: categoryId);
-      _currentIndex = 0;
+      _currentVideoIndex = 0;
       _feedStarted = true;
     });
     _loadVideo(0);
@@ -47,36 +58,49 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     } catch (_) {}
   }
 
-  void _switchCategory(String? categoryId) {
-    if (categoryId == _selectedCategory) return;
-    _activeController?.close();
-    setState(() {
-      _selectedCategory = categoryId;
-      _videoIds = PresetData.getShortVideoIds(categoryId: categoryId);
-      _currentIndex = 0;
-    });
-    _loadVideo(0);
-  }
-
-  void _loadVideo(int index) {
-    if (index < 0 || index >= _videoIds.length) return;
-
-    _activeController?.close();
-    _activeController = YoutubePlayerController(
+  void _ensureController() {
+    if (_ytController != null) return;
+    _ytController = YoutubePlayerController(
       params: const YoutubePlayerParams(
         showControls: false,
-        mute: false,
-        loop: true,
-        enableCaption: false,
-        strictRelatedVideos: true,
         showFullscreenButton: false,
+        playsInline: true,
+        loop: true,
+        origin: 'https://www.youtube-nocookie.com',
       ),
     );
-    _activeController!.loadVideoById(videoId: _videoIds[index]);
+  }
+
+  void _loadVideo(int videoIndex) {
+    if (videoIndex < 0 || videoIndex >= _videoIds.length) return;
+
+    final videoId = _videoIds[videoIndex];
+
+    // Reuse the same controller — don't close & recreate.
+    // Creating new WKWebViews repeatedly fails to load the YouTube API.
+    _ensureController();
+    _ytController!.loadVideoById(videoId: videoId);
+
+    // Retry: if not playing after 4s, try playVideo() explicitly
+    Future.delayed(const Duration(seconds: 4), () {
+      if (_ytController == null || _currentVideoIndex != videoIndex) return;
+      if (_ytController!.value.playerState != PlayerState.playing) {
+        _ytController!.playVideo();
+      }
+    });
+
+    // Retry: if still not playing after 8s, re-load the video
+    Future.delayed(const Duration(seconds: 8), () {
+      if (_ytController == null || _currentVideoIndex != videoIndex) return;
+      if (_ytController!.value.playerState != PlayerState.playing) {
+        _ytController!.loadVideoById(videoId: videoId);
+      }
+    });
+
     _watchStart = DateTime.now();
 
     try {
-      AnalyticsService().logVideoStarted(_videoIds[index]);
+      AnalyticsService().logVideoStarted(videoId);
     } catch (_) {}
   }
 
@@ -85,72 +109,97 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     return DateTime.now().difference(_watchStart!).inSeconds;
   }
 
-  void _onPageChanged(int index) {
+  void _onPageChanged(int pageIndex) {
+    final videoIndex = _videoIndexFromPage(pageIndex);
+    final isVideo = _isVideoPage(pageIndex);
+
+    if (isVideo && videoIndex != _currentVideoIndex) {
+      try {
+        AnalyticsService().logVideoExited(
+          _videoIds[_currentVideoIndex],
+          _watchDurationSec,
+        );
+      } catch (_) {}
+
+      setState(() => _currentVideoIndex = videoIndex);
+      _loadVideo(videoIndex);
+    } else if (!isVideo) {
+      setState(() {});
+    }
+  }
+
+  void _onRatingSelected(String videoId, int rating) {
+    HapticFeedback.mediumImpact();
+    setState(() => _ratings[videoId] = rating);
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${TearRatingWidget.labelFor(rating)} — 기록했어요!'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: const Color(0xFF1E293B),
+      ),
+    );
+
     try {
-      AnalyticsService().logVideoExited(
-        _videoIds[_currentIndex],
-        _watchDurationSec,
+      AnalyticsService().logFeedbackSubmitted(
+        videoId,
+        rating,
+        _selectedCategory != null ? [_selectedCategory!] : [],
       );
     } catch (_) {}
-
-    setState(() => _currentIndex = index);
-    _loadVideo(index);
   }
 
-  void _handleSwipe(DragEndDetails details) {
-    final velocity = details.primaryVelocity ?? 0;
-    if (velocity < -300 && _currentIndex < _videoIds.length - 1) {
-      HapticFeedback.lightImpact();
-      _onPageChanged(_currentIndex + 1);
-    } else if (velocity > 300 && _currentIndex > 0) {
-      HapticFeedback.lightImpact();
-      _onPageChanged(_currentIndex - 1);
-    }
-  }
-
-  void _onFeedbackTap() {
-    HapticFeedback.mediumImpact();
-    TearFeedbackSheet.show(
-      context,
-      youtubeId: _videoIds[_currentIndex],
-      watchDurationSec: _watchDurationSec,
-      categoryId: _selectedCategory,
-    );
-  }
-
-  Future<void> _onBookmark() async {
+  void _onBookmark(String videoId) {
     HapticFeedback.lightImpact();
-    final user = ref.read(authStateProvider).value;
-    if (user == null) return;
+    final alreadySaved = _savedIds.contains(videoId);
+
+    setState(() {
+      if (alreadySaved) {
+        _savedIds.remove(videoId);
+      } else {
+        _savedIds.add(videoId);
+      }
+    });
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(alreadySaved ? '보관함에서 삭제했습니다' : '보관함에 저장했습니다'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: const Color(0xFF1E293B),
+      ),
+    );
+
     try {
-      await SavedLinkRepository().addLink(
-        uid: user.uid,
-        youtubeId: _videoIds[_currentIndex],
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('보관함에 저장했습니다'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-      try {
-        AnalyticsService().logLinkSaved(_videoIds[_currentIndex]);
-      } catch (_) {}
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('저장 실패: $e')),
-        );
-      }
-    }
+      AnalyticsService().logLinkSaved(videoId);
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
+    final catPref = ref.watch(categoryPreferenceProvider);
+
     if (!_feedStarted) {
-      return _CategoryPicker(onSelect: _startFeed);
+      return catPref.when(
+        loading: () => const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+        error: (_, __) => _CategoryPicker(onSelect: _startFeed),
+        data: (saved) {
+          if (saved != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!_feedStarted && mounted) {
+                _startFeed(saved, save: false);
+              }
+            });
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          return _CategoryPicker(onSelect: _startFeed);
+        },
+      );
     }
     return _buildFeed();
   }
@@ -165,121 +214,42 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     return Scaffold(
       extendBody: true,
       extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          // Video player (touch-disabled so Flutter handles all gestures)
-          if (_activeController != null)
-            Positioned.fill(
-              child: _ActiveVideoPage(
-                controller: _activeController!,
-                videoId: _videoIds[_currentIndex],
-              ),
-            )
-          else
-            Positioned.fill(
-              child: _ThumbnailPage(videoId: _videoIds[_currentIndex]),
-            ),
+      body: PageView.builder(
+        controller: _pageController,
+        scrollDirection: Axis.vertical,
+        onPageChanged: _onPageChanged,
+        itemCount: _totalPages,
+        itemBuilder: (context, pageIndex) {
+          final videoIndex = _videoIndexFromPage(pageIndex);
+          final videoId = _videoIds[videoIndex];
 
-          // Full-screen swipe gesture detector
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onVerticalDragEnd: _handleSwipe,
-              child: const SizedBox.expand(),
-            ),
-          ),
-
-          // Category chips (top) — above gesture layer, tappable
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            left: 0,
-            right: 0,
-            child: _CategoryChips(
-              selected: _selectedCategory,
-              onChanged: _switchCategory,
-            ),
-          ),
-
-          // Side action buttons + nav (right) — above gesture layer, tappable
-          Positioned(
-            right: 12,
-            bottom: MediaQuery.of(context).padding.bottom + 80,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Navigate previous
-                _ActionButton(
-                  icon: Icons.keyboard_arrow_up_rounded,
-                  label: '이전',
-                  onTap: _currentIndex > 0
-                      ? () {
-                          HapticFeedback.lightImpact();
-                          _onPageChanged(_currentIndex - 1);
-                        }
-                      : null,
-                  dimmed: _currentIndex <= 0,
-                ),
-                const SizedBox(height: 16),
-                _ActionButton(
-                  icon: Icons.water_drop_rounded,
-                  label: '평가',
-                  onTap: _onFeedbackTap,
-                ),
-                const SizedBox(height: 16),
-                _ActionButton(
-                  icon: Icons.bookmark_add_outlined,
-                  label: '저장',
-                  onTap: _onBookmark,
-                ),
-                const SizedBox(height: 16),
-                // Navigate next
-                _ActionButton(
-                  icon: Icons.keyboard_arrow_down_rounded,
-                  label: '다음',
-                  onTap: _currentIndex < _videoIds.length - 1
-                      ? () {
-                          HapticFeedback.lightImpact();
-                          _onPageChanged(_currentIndex + 1);
-                        }
-                      : null,
-                  dimmed: _currentIndex >= _videoIds.length - 1,
-                ),
-              ],
-            ),
-          ),
-
-          // Video info (bottom) — display only, pass through touches
-          Positioned(
-            left: 16,
-            right: 72,
-            bottom: MediaQuery.of(context).padding.bottom + 80,
-            child: IgnorePointer(
-              child: _VideoInfo(videoId: _videoIds[_currentIndex]),
-            ),
-          ),
-
-          // Video position indicator
-          Positioned(
-            left: 16,
-            bottom: MediaQuery.of(context).padding.bottom + 60,
-            child: IgnorePointer(
-              child: Text(
-                '${_currentIndex + 1} / ${_videoIds.length}',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.5),
-                  fontSize: 11,
-                ),
-              ),
-            ),
-          ),
-        ],
+          if (_isVideoPage(pageIndex)) {
+            if (videoIndex == _currentVideoIndex &&
+                _ytController != null) {
+              return _VideoPage(
+                controller: _ytController!,
+                videoId: videoId,
+              );
+            }
+            return _ThumbnailPage(videoId: videoId);
+          } else {
+            return _FeedbackPage(
+              videoId: videoId,
+              rating: _ratings[videoId],
+              isSaved: _savedIds.contains(videoId),
+              onRatingSelected: (r) => _onRatingSelected(videoId, r),
+              onBookmark: () => _onBookmark(videoId),
+              isLast: videoIndex == _videoIds.length - 1,
+            );
+          }
+        },
       ),
     );
   }
 }
 
 // ============================================================
-// Category Picker — shown before feed starts
+// Category Picker
 // ============================================================
 class _CategoryPicker extends StatelessWidget {
   const _CategoryPicker({required this.onSelect});
@@ -435,11 +405,11 @@ class _CategoryCard extends StatelessWidget {
 }
 
 // ============================================================
-// Feed components
+// Video Page — full-screen YouTube player, NO overlays
 // ============================================================
 
-class _ActiveVideoPage extends StatelessWidget {
-  const _ActiveVideoPage({
+class _VideoPage extends StatelessWidget {
+  const _VideoPage({
     required this.controller,
     required this.videoId,
   });
@@ -450,18 +420,7 @@ class _ActiveVideoPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.black,
-      child: Center(
-        child: AspectRatio(
-          aspectRatio: 9 / 16,
-          child: IgnorePointer(
-            child: YoutubePlayerScaffold(
-              controller: controller,
-              aspectRatio: 9 / 16,
-              builder: (context, player) => player,
-            ),
-          ),
-        ),
-      ),
+      child: YoutubePlayer(controller: controller),
     );
   }
 }
@@ -496,156 +455,172 @@ class _ThumbnailPage extends StatelessWidget {
   }
 }
 
-class _CategoryChips extends StatelessWidget {
-  const _CategoryChips({
-    required this.selected,
-    required this.onChanged,
+// ============================================================
+// Feedback Page — between videos
+// ============================================================
+
+class _FeedbackPage extends StatelessWidget {
+  const _FeedbackPage({
+    required this.videoId,
+    required this.rating,
+    required this.isSaved,
+    required this.onRatingSelected,
+    required this.onBookmark,
+    required this.isLast,
   });
-  final String? selected;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final categories =
-        PresetData.collections.map((c) => (c.id, '${c.emoji} ${c.title}'));
-
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final (id, label) = categories.elementAt(index);
-          final isSelected = id == selected;
-          return GestureDetector(
-            onTap: () => onChanged(id),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: isSelected
-                      ? Colors.white
-                      : Colors.white.withValues(alpha: 0.3),
-                  width: 0.5,
-                ),
-              ),
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected ? Colors.black : Colors.white,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    this.onTap,
-    this.dimmed = false,
-  });
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  final bool dimmed;
-
-  @override
-  Widget build(BuildContext context) {
-    final opacity = dimmed ? 0.3 : 1.0;
-    return GestureDetector(
-      onTap: onTap,
-      child: Opacity(
-        opacity: opacity,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: Colors.white, size: 24),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _VideoInfo extends StatelessWidget {
-  const _VideoInfo({required this.videoId});
   final String videoId;
+  final int? rating;
+  final bool isSaved;
+  final ValueChanged<int> onRatingSelected;
+  final VoidCallback onBookmark;
+  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
     final meta = PresetData.getVideoMeta(videoId);
-    if (meta == null) return const SizedBox.shrink();
+    final bottomPad = MediaQuery.of(context).padding.bottom;
 
-    final durationMin = meta.durationSeconds ~/ 60;
-    final durationSec = meta.durationSeconds % 60;
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(flex: 2),
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          meta.title,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            shadows: [Shadow(color: Colors.black54, blurRadius: 8)],
+              if (meta != null) ...[
+                Text(
+                  meta.title,
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  meta.channel,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 32),
+
+              const Text(
+                '눈물이 났나요?',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '탭 한 번이면 끝!',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              TearRatingWidget(
+                rating: rating,
+                onChanged: onRatingSelected,
+              ),
+
+              const SizedBox(height: 24),
+
+              GestureDetector(
+                onTap: onBookmark,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white
+                        .withValues(alpha: isSaved ? 0.15 : 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white
+                          .withValues(alpha: isSaved ? 0.3 : 0.1),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isSaved
+                            ? Icons.bookmark_rounded
+                            : Icons.bookmark_add_outlined,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isSaved ? '보관함에 저장됨' : '보관함에 저장',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const Spacer(flex: 2),
+
+              if (!isLast)
+                Padding(
+                  padding: EdgeInsets.only(bottom: bottomPad + 16),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.keyboard_arrow_up_rounded,
+                        color: Colors.white.withValues(alpha: 0.3),
+                        size: 28,
+                      ),
+                      Text(
+                        '위로 스와이프하면 다음 영상',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Padding(
+                  padding: EdgeInsets.only(bottom: bottomPad + 16),
+                  child: Text(
+                    '마지막 영상이에요',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Text(
-              meta.channel,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.8),
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '$durationMin:${durationSec.toString().padLeft(2, '0')}',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 }

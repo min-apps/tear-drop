@@ -89,6 +89,8 @@ lib/
 |----------|--------|-----|
 | Video UX | TikTok-style vertical swipe | Immediate engagement, mobile-native |
 | Video length | ≤ 3 minutes only | Short-form for quick emotional impact |
+| Player overlay | **No overlays on YouTube player** | Overlays block iOS/Android WebView playback |
+| Feedback UX | Separate page between videos | Non-intrusive; appears after each video via scroll |
 | State management | Riverpod (manual, no codegen) | Simple for solo dev |
 | Models | freezed + json_serializable | Firestore serialization |
 | Auth | Anonymous first | Zero friction |

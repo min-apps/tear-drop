@@ -99,7 +99,7 @@ class _TearFeedbackSheetState extends ConsumerState<TearFeedbackSheet> {
               rating: null,
               onChanged: _submit,
             ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24 + MediaQuery.of(context).padding.bottom),
         ],
       ),
     );

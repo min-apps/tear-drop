@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:teardrop/src/data/models/app_user.dart';
+import 'package:teardrop/src/data/preset_data.dart';
 import 'package:teardrop/src/data/repositories/user_repository.dart';
 import 'package:teardrop/src/data/services/analytics_service.dart';
 import 'package:teardrop/src/data/services/tear_profile_service.dart';
 import 'package:teardrop/src/features/auth/auth_providers.dart';
+import 'package:teardrop/src/features/feed/category_preference.dart';
 import 'package:teardrop/src/features/profile/savings_card.dart';
 import 'package:teardrop/src/features/profile/tear_profile_card.dart';
 import 'package:teardrop/src/theme.dart';
@@ -61,6 +63,8 @@ class ProfileScreen extends ConsumerWidget {
                 _StatsRow(user: user),
                 const SizedBox(height: 12),
                 SavingsCard(user: user),
+                const SizedBox(height: 12),
+                _CategorySetting(),
                 if (user.emotionTagCounts.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   _EmotionDistribution(tagCounts: user.emotionTagCounts),
@@ -214,6 +218,81 @@ class _EmotionDistribution extends StatelessWidget {
                     ],
                   ),
                 )),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CategorySetting extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final catPref = ref.watch(categoryPreferenceProvider);
+    final savedId = catPref.valueOrNull;
+
+    final collection = savedId != null
+        ? PresetData.collections
+            .where((c) => c.id == savedId)
+            .firstOrNull
+        : null;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '영상 카테고리',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: TearDropTheme.textPrimary,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: PresetData.collections.map((c) {
+                final isSelected = c.id == savedId;
+                return ChoiceChip(
+                  label: Text('${c.emoji} ${c.title}'),
+                  selected: isSelected,
+                  onSelected: (_) {
+                    ref
+                        .read(categoryPreferenceProvider.notifier)
+                        .save(c.id);
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            '${c.emoji} ${c.title} 카테고리로 변경했어요'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  selectedColor:
+                      TearDropTheme.primary.withValues(alpha: 0.15),
+                  labelStyle: TextStyle(
+                    color: isSelected
+                        ? TearDropTheme.primary
+                        : TearDropTheme.textSecondary,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                );
+              }).toList(),
+            ),
+            if (collection != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                collection.subtitle,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: TearDropTheme.textSecondary,
+                    ),
+              ),
+            ],
           ],
         ),
       ),

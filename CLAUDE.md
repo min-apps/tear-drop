@@ -46,3 +46,16 @@ flutter build web && firebase deploy --only hosting --project teary-app  # Deplo
 - iOS: 15.0+
 - Android: minSdk 23, compileSdk 36
 - Web: Firebase Hosting
+
+## YouTube Player Constraints
+- **MUST use `youtube_player_iframe` package.** Do NOT replace it with raw `webview_flutter` or any other WebView-based approach.
+- **MUST set `origin: 'https://www.youtube-nocookie.com'`** in all `YoutubePlayerParams`. Without this, YouTube returns error 152 in WKWebView (iOS) due to missing Referer headers.
+- **MUST reuse `YoutubePlayerController`** — do NOT `close()` and recreate for each video. Closing destroys the WKWebView, and new instances frequently fail to reload the YouTube iframe API. Use `loadVideoById()` on the existing controller instead.
+- **DO NOT overlay widgets on top of the YouTube player.** Overlays (buttons, text, gesture detectors) block video playback on iOS/Android. The YouTube iframe/WebView must be unobstructed.
+- Use `showControls: false` in feed — player controls are hidden; navigation is handled by PageView scroll.
+- Video pages must be full-screen with no overlapping UI elements.
+- UI elements (feedback, info, buttons) go on separate pages between videos, not on top of them.
+
+## Data Collection
+- **Do NOT change the current data collection approach.** Keep analytics events, Firestore schema, and behavioral tracking as-is for data consistency.
+- Any new features must integrate with the existing analytics pipeline, not replace it.

@@ -26,70 +26,50 @@ class PlayerScreen extends ConsumerStatefulWidget {
 }
 
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
-  late PageController _pageController;
-  late List<YoutubePlayerController> _controllers;
   late List<String> _videoIds;
   late int _currentIndex;
+  late YoutubePlayerController _ytController;
   DateTime? _watchStart;
 
   @override
   void initState() {
     super.initState();
     _videoIds = widget.videoIds ?? [widget.youtubeId];
-    _currentIndex = _videoIds.indexOf(widget.youtubeId).clamp(0, _videoIds.length - 1);
-    _pageController = PageController(initialPage: _currentIndex);
-
-    _controllers = _videoIds.map((_) {
-      return YoutubePlayerController(
-        params: const YoutubePlayerParams(
-          showControls: true,
-          mute: false,
-          loop: false,
-          enableCaption: false,
-          strictRelatedVideos: true,
-          showFullscreenButton: true,
-        ),
-      );
-    }).toList();
-
-    _controllers[_currentIndex].loadVideoById(videoId: _videoIds[_currentIndex]);
-    _watchStart = DateTime.now();
-
-    try {
-      AnalyticsService().logVideoStarted(_videoIds[_currentIndex]);
-    } catch (_) {}
+    _currentIndex =
+        _videoIds.indexOf(widget.youtubeId).clamp(0, _videoIds.length - 1);
+    _loadVideo(_currentIndex);
   }
 
   @override
   void dispose() {
-    for (final c in _controllers) {
-      c.close();
-    }
-    _pageController.dispose();
+    _ytController.close();
     super.dispose();
+  }
+
+  void _loadVideo(int index) {
+    final videoId = _videoIds[index];
+
+    _ytController = YoutubePlayerController.fromVideoId(
+      videoId: videoId,
+      autoPlay: true,
+      params: const YoutubePlayerParams(
+        showControls: true,
+        showFullscreenButton: false,
+        playsInline: true,
+        origin: 'https://www.youtube-nocookie.com',
+      ),
+    );
+
+    _watchStart = DateTime.now();
+
+    try {
+      AnalyticsService().logVideoStarted(videoId);
+    } catch (_) {}
   }
 
   int get _watchDurationSec {
     if (_watchStart == null) return 0;
     return DateTime.now().difference(_watchStart!).inSeconds;
-  }
-
-  void _onPageChanged(int index) {
-    // Log exit for previous video
-    try {
-      AnalyticsService().logVideoExited(
-        _videoIds[_currentIndex],
-        _watchDurationSec,
-      );
-    } catch (_) {}
-
-    setState(() => _currentIndex = index);
-    _controllers[index].loadVideoById(videoId: _videoIds[index]);
-    _watchStart = DateTime.now();
-
-    try {
-      AnalyticsService().logVideoStarted(_videoIds[index]);
-    } catch (_) {}
   }
 
   void _onFeedbackTap() {
@@ -141,14 +121,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
             child: ResponsiveCenter(
               maxWidth: 500,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: PageView.builder(
-                controller: _pageController,
-                scrollDirection: Axis.vertical,
-                onPageChanged: _onPageChanged,
-                itemCount: _videoIds.length,
-                itemBuilder: (context, index) {
-                  return _VideoPlayerTile(controller: _controllers[index]);
-                },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: AspectRatio(
+                  aspectRatio: 9 / 16,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: YoutubePlayer(controller: _ytController),
+                  ),
+                ),
               ),
             ),
           ),
@@ -170,7 +151,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                     } catch (_) {}
                     context.pop();
                   },
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                  icon:
+                      const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
                   color: Colors.white,
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.white.withValues(alpha: 0.15),
@@ -231,29 +213,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _VideoPlayerTile extends StatelessWidget {
-  const _VideoPlayerTile({required this.controller});
-  final YoutubePlayerController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      child: AspectRatio(
-        aspectRatio: 9 / 16,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: YoutubePlayerScaffold(
-            controller: controller,
-            aspectRatio: 9 / 16,
-            builder: (context, player) => player,
-          ),
-        ),
       ),
     );
   }
