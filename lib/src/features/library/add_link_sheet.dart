@@ -28,6 +28,18 @@ class _AddLinkSheetState extends ConsumerState<AddLinkSheet> {
   final _controller = TextEditingController();
   String? _error;
   bool _saving = false;
+  bool _hasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      final hasText = _controller.text.trim().isNotEmpty;
+      if (hasText != _hasText) {
+        setState(() => _hasText = hasText);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -61,7 +73,7 @@ class _AddLinkSheetState extends ConsumerState<AddLinkSheet> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        setState(() => _error = '저장 실패: $e');
+        setState(() => _error = '저장에 실패했습니다. 다시 시도해주세요.');
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -119,7 +131,7 @@ class _AddLinkSheetState extends ConsumerState<AddLinkSheet> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _saving ? null : _save,
+              onPressed: _saving || !_hasText ? null : _save,
               child: _saving
                   ? const SizedBox(
                       height: 20,

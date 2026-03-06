@@ -57,7 +57,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
   @override
   void dispose() {
-    _ytController.close();
+    try {
+      _ytController.close();
+    } catch (_) {}
     super.dispose();
   }
 
@@ -148,6 +150,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                   icon:
                       const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
                   color: Colors.white,
+                  tooltip: '뒤로 가기',
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.white.withValues(alpha: 0.15),
                   ),
@@ -156,6 +159,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                   onPressed: _onBookmark,
                   icon: const Icon(Icons.bookmark_add_outlined, size: 20),
                   color: Colors.white,
+                  tooltip: '보관함에 저장',
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.white.withValues(alpha: 0.15),
                   ),

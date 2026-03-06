@@ -36,12 +36,16 @@ class TearRatingWidget extends StatelessWidget {
       children: levels.map((level) {
         final isSelected = rating == level.value;
         return Expanded(
-          child: GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              onChanged(level.value);
-            },
-            child: AnimatedContainer(
+          child: Semantics(
+            label: '${level.label}: ${level.description}',
+            button: true,
+            selected: isSelected,
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                onChanged(level.value);
+              },
+              child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin: const EdgeInsets.symmetric(horizontal: 4),
               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -79,6 +83,7 @@ class TearRatingWidget extends StatelessWidget {
                 ],
               ),
             ),
+          ),
           ),
         );
       }).toList(),

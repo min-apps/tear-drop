@@ -14,8 +14,12 @@ class CategoryPreferenceNotifier extends StateNotifier<AsyncValue<String?>> {
   }
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    state = AsyncValue.data(prefs.getString(_kCategoryKey));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      state = AsyncValue.data(prefs.getString(_kCategoryKey));
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
   }
 
   Future<void> save(String categoryId) async {

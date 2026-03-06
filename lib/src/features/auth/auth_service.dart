@@ -19,7 +19,8 @@ class AuthService {
 
   Future<User> signInAnonymously() async {
     final credential = await _auth.signInAnonymously();
-    final user = credential.user!;
+    final user = credential.user;
+    if (user == null) throw Exception('Anonymous sign-in returned null user');
 
     // Create user doc if first time
     final userDoc =

@@ -83,7 +83,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
     // Retry: if not playing after 4s, try playVideo() explicitly
     Future.delayed(const Duration(seconds: 4), () {
-      if (_ytController == null || _currentVideoIndex != videoIndex) return;
+      if (!mounted || _ytController == null || _currentVideoIndex != videoIndex) return;
       if (_ytController!.value.playerState != PlayerState.playing) {
         _ytController!.playVideo();
       }
@@ -91,7 +91,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
     // Retry: if still not playing after 8s, re-load the video
     Future.delayed(const Duration(seconds: 8), () {
-      if (_ytController == null || _currentVideoIndex != videoIndex) return;
+      if (!mounted || _ytController == null || _currentVideoIndex != videoIndex) return;
       if (_ytController!.value.playerState != PlayerState.playing) {
         _ytController!.loadVideoById(videoId: videoId);
       }
