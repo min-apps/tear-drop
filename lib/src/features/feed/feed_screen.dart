@@ -207,17 +207,49 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   Widget _buildFeed() {
     if (_videoIds.isEmpty) {
       return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('영상을 불러올 수 없습니다'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => setState(() => _feedStarted = false),
-                child: const Text('다시 선택하기'),
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+            ),
+          ),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.videocam_off_outlined, size: 48,
+                      color: Colors.white.withValues(alpha: 0.4)),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '영상을 불러올 수 없습니다',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '다른 카테고리를 선택해보세요',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () => setState(() => _feedStarted = false),
+                    child: const Text('다시 선택하기'),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       );

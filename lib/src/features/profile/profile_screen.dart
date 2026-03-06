@@ -42,8 +42,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         title: const Text('내 프로필'),
       ),
       body: userAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('오류: $e')),
+        loading: () => const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('프로필 불러오는 중...', style: TextStyle(color: TearDropTheme.textSecondary)),
+            ],
+          ),
+        ),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline_rounded, size: 48, color: TearDropTheme.textSecondary.withValues(alpha: 0.5)),
+                const SizedBox(height: 16),
+                Text(
+                  '프로필을 불러올 수 없습니다',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: TearDropTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '네트워크 연결을 확인해주세요',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: TearDropTheme.textSecondary),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () => ref.invalidate(_userProvider),
+                  child: const Text('다시 시도'),
+                ),
+              ],
+            ),
+          ),
+        ),
         data: (user) {
           if (user == null) {
             return Center(
@@ -192,12 +229,14 @@ class _EmotionDistribution extends StatelessWidget {
                   child: Row(
                     children: [
                       SizedBox(
-                        width: 36,
-                        child: Text(entry.key,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: TearDropTheme.textSecondary,
-                                    )),
+                        width: 48,
+                        child: Text(
+                          entry.key,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: TearDropTheme.textSecondary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(

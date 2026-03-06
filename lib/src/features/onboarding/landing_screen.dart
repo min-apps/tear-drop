@@ -163,13 +163,20 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
           ),
         ),
         child: _loading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
+            ? const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Text('시작 준비 중...'),
+                ],
               )
             : const Text('시작하기'),
       ),

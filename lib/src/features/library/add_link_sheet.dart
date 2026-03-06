@@ -101,6 +101,10 @@ class _AddLinkSheetState extends ConsumerState<AddLinkSheet> {
             controller: _controller,
             decoration: InputDecoration(
               hintText: 'YouTube URL 붙여넣기',
+              helperText: 'youtube.com/watch?v=... 또는 youtu.be/... 형식',
+              helperStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: TearDropTheme.textSecondary,
+              ),
               errorText: _error,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -108,6 +112,7 @@ class _AddLinkSheetState extends ConsumerState<AddLinkSheet> {
               prefixIcon: const Icon(Icons.link),
             ),
             keyboardType: TextInputType.url,
+            autofocus: true,
             onSubmitted: (_) => _save(),
           ),
           const SizedBox(height: 16),

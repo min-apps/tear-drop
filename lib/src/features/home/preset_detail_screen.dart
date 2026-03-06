@@ -6,23 +6,54 @@ import 'package:teardrop/src/data/services/analytics_service.dart';
 import 'package:teardrop/src/shared/widgets/video_card.dart';
 import 'package:teardrop/src/theme.dart';
 
-class PresetDetailScreen extends StatelessWidget {
+class PresetDetailScreen extends StatefulWidget {
   const PresetDetailScreen({super.key, required this.presetId});
   final String presetId;
 
   @override
+  State<PresetDetailScreen> createState() => _PresetDetailScreenState();
+}
+
+class _PresetDetailScreenState extends State<PresetDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    try {
+      AnalyticsService().logPresetOpened(widget.presetId);
+    } catch (_) {}
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final collection = PresetData.getById(presetId);
+    final collection = PresetData.getById(widget.presetId);
     if (collection == null) {
       return Scaffold(
-        appBar: AppBar(),
-        body: const Center(child: Text('컬렉션을 찾을 수 없습니다')),
+        appBar: AppBar(
+          leading: const BackButton(),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline_rounded, size: 48, color: TearDropTheme.textSecondary.withValues(alpha: 0.5)),
+              const SizedBox(height: 16),
+              Text(
+                '컬렉션을 찾을 수 없습니다',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: TearDropTheme.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => context.pop(),
+                child: const Text('돌아가기'),
+              ),
+            ],
+          ),
+        ),
       );
     }
-
-    try {
-      AnalyticsService().logPresetOpened(presetId);
-    } catch (_) {}
 
     return Scaffold(
       appBar: AppBar(
@@ -36,7 +67,7 @@ class PresetDetailScreen extends StatelessWidget {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
         children: [
           // Header
           Container(

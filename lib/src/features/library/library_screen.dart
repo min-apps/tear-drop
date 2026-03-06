@@ -21,8 +21,40 @@ class LibraryScreen extends ConsumerWidget {
         title: const Text('보관함'),
       ),
       body: linksAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('오류: $e')),
+        loading: () => const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('보관함 불러오는 중...', style: TextStyle(color: TearDropTheme.textSecondary)),
+            ],
+          ),
+        ),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline_rounded, size: 48, color: TearDropTheme.textSecondary.withValues(alpha: 0.5)),
+                const SizedBox(height: 16),
+                Text(
+                  '보관함을 불러올 수 없습니다',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: TearDropTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '네트워크 연결을 확인해주세요',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: TearDropTheme.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ),
         data: (links) {
           if (links.isEmpty) {
             return Center(
@@ -61,6 +93,12 @@ class LibraryScreen extends ConsumerWidget {
                                 color: TearDropTheme.textSecondary,
                                 height: 1.4,
                               ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => AddLinkSheet.show(context),
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('링크 추가하기'),
                     ),
                   ],
                 ),
