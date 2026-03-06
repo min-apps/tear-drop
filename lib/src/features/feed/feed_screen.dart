@@ -186,7 +186,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         ),
         error: (_, __) => _CategoryPicker(onSelect: _startFeed),
         data: (saved) {
-          if (saved != null) {
+          if (saved != null &&
+              PresetData.collections.any((c) => c.id == saved)) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!_feedStarted && mounted) {
                 _startFeed(saved, save: false);

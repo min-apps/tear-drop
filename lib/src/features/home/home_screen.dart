@@ -117,9 +117,10 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 64,
+        width: 72,
+        height: 48,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               isSelected ? selectedIcon : icon,
@@ -128,7 +129,7 @@ class _NavItem extends StatelessWidget {
                   ? Colors.white
                   : Colors.white.withValues(alpha: 0.45),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               label,
               style: TextStyle(
