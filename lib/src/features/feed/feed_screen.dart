@@ -112,7 +112,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   void _onPageChanged(int pageIndex) {
     final videoIndex = _videoIndexFromPage(pageIndex);
     final isVideo = _isVideoPage(pageIndex);
-
     if (isVideo && videoIndex != _currentVideoIndex) {
       try {
         AnalyticsService().logVideoExited(
@@ -206,8 +205,20 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
   Widget _buildFeed() {
     if (_videoIds.isEmpty) {
-      return const Scaffold(
-        body: Center(child: Text('영상을 불러올 수 없습니다')),
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('영상을 불러올 수 없습니다'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => setState(() => _feedStarted = false),
+                child: const Text('다시 선택하기'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -420,7 +431,12 @@ class _VideoPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.black,
-      child: YoutubePlayer(controller: controller),
+      // IgnorePointer lets PageView receive swipe gestures
+      // instead of the WKWebView consuming them.
+      // Controls are disabled so no user interaction is needed.
+      child: IgnorePointer(
+        child: YoutubePlayer(controller: controller),
+      ),
     );
   }
 }

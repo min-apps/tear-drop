@@ -5,6 +5,7 @@ import 'package:teardrop/src/data/services/analytics_service.dart';
 import 'package:teardrop/src/features/auth/auth_providers.dart';
 import 'package:teardrop/src/features/library/add_link_sheet.dart';
 import 'package:teardrop/src/features/library/library_providers.dart';
+import 'package:teardrop/src/data/preset_data.dart';
 import 'package:teardrop/src/shared/widgets/video_card.dart';
 import 'package:teardrop/src/theme.dart';
 
@@ -68,7 +69,7 @@ class LibraryScreen extends ConsumerWidget {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
             itemCount: links.length,
             itemBuilder: (context, index) {
               final link = links[index];
@@ -101,8 +102,8 @@ class LibraryScreen extends ConsumerWidget {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: VideoCard(
                     youtubeId: link.youtubeId,
-                    title: link.youtubeId,
-                    subtitle: link.userNote,
+                    title: PresetData.getVideoMeta(link.youtubeId)?.title ?? link.youtubeId,
+                    subtitle: link.userNote ?? PresetData.getVideoMeta(link.youtubeId)?.channel,
                     trailing: link.tearRating != null
                         ? Container(
                             padding: const EdgeInsets.symmetric(
@@ -138,10 +139,14 @@ class LibraryScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => AddLinkSheet.show(context),
-        child: const Icon(Icons.add_rounded),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 56),
+        child: FloatingActionButton(
+          onPressed: () => AddLinkSheet.show(context),
+          child: const Icon(Icons.add_rounded),
+        ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }

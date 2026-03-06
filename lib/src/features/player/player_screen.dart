@@ -37,20 +37,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _videoIds = widget.videoIds ?? [widget.youtubeId];
     _currentIndex =
         _videoIds.indexOf(widget.youtubeId).clamp(0, _videoIds.length - 1);
-    _loadVideo(_currentIndex);
-  }
-
-  @override
-  void dispose() {
-    _ytController.close();
-    super.dispose();
-  }
-
-  void _loadVideo(int index) {
-    final videoId = _videoIds[index];
 
     _ytController = YoutubePlayerController.fromVideoId(
-      videoId: videoId,
+      videoId: _videoIds[_currentIndex],
       autoPlay: true,
       params: const YoutubePlayerParams(
         showControls: true,
@@ -59,12 +48,17 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         origin: 'https://www.youtube-nocookie.com',
       ),
     );
-
     _watchStart = DateTime.now();
 
     try {
-      AnalyticsService().logVideoStarted(videoId);
+      AnalyticsService().logVideoStarted(_videoIds[_currentIndex]);
     } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _ytController.close();
+    super.dispose();
   }
 
   int get _watchDurationSec {
